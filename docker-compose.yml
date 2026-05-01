@@ -1,0 +1,17 @@
+services:
+  german-tutor:
+    build: .
+    container_name: german-tutor
+    ports:
+      - "8246:8000"
+    volumes:
+      - ./work/Vokabeln.md:/work/Vokabeln.md
+      - ./work/Wortschatz.md:/work/Wortschatz.md
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+#networks:
+#  default:
+#    external: true
+#    name: cloudflare
