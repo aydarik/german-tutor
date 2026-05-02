@@ -16,11 +16,31 @@ class WordEntry:
         self.parse()
 
     def parse(self):
-        # Split into front (word + grammar + translation) and back (explanation)
-        parts = self.original_text.split(" - ", 1)
-        front = parts[0]
-        if len(parts) > 1:
-            self.explanation = parts[1].strip()
+        # Improved split logic to avoid splitting inside bold tags or parentheses
+        bold_start = self.original_text.find("**")
+        bold_end = self.original_text.find("**", bold_start + 2) if bold_start != -1 else -1
+
+        if bold_end != -1:
+            search_start = bold_end + 2
+            # Check for parentheses after bold part (translations often contain hyphens)
+            parens_start = self.original_text.find("(", search_start)
+            parens_end = self.original_text.find(")", parens_start) if parens_start != -1 else -1
+
+            if parens_end != -1:
+                search_start = parens_end + 1
+
+            sep_idx = self.original_text.find(" - ", search_start)
+            if sep_idx != -1:
+                front = self.original_text[:sep_idx]
+                self.explanation = self.original_text[sep_idx + 3:].strip()
+            else:
+                front = self.original_text
+        else:
+            # Fallback for lines without bold formatting
+            parts = self.original_text.split(" - ", 1)
+            front = parts[0]
+            if len(parts) > 1:
+                self.explanation = parts[1].strip()
 
         # Extract German word (between **)
         de_match = re.search(r"\*\*(.*?)\*\*", front)
@@ -80,12 +100,17 @@ def get_words(file_paths: List[str]) -> List[WordEntry]:
         for i, line in enumerate(lines):
             if line.strip().startswith("- [ ]") or line.strip().startswith("- [x]"):
                 entry = WordEntry(line, file_path, i)
-                if i + 1 < len(lines) and (
-                        lines[i + 1].strip().startswith("- *Beispiel:*") or lines[i + 1].strip().startswith(
-                        "*Beispiel:*")):
-                    entry.set_example(lines[i + 1])
-                elif i + 1 < len(lines) and lines[i + 1].startswith("\t-"):
-                    entry.set_example(lines[i + 1])
+                # Look ahead for example (could be on the next line or the one after if there's a Grammar note)
+                for j in range(1, 3):
+                    if i + j < len(lines):
+                        next_line = lines[i + j].strip()
+                        if next_line.startswith("- *Beispiel:*") or next_line.startswith("*Beispiel:*"):
+                            entry.set_example(lines[i + j])
+                            break
+                        elif j == 1 and lines[i + j].startswith("\t-"):
+                            # If the very next line is an indented bullet but doesn't say "Beispiel", 
+                            # we still set it as a fallback, but keep looking for a better one
+                            entry.set_example(lines[i + j])
 
                 words.append(entry)
     return words
