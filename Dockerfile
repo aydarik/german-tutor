@@ -11,10 +11,6 @@ RUN pip install --no-cache-dir -r app/requirements.txt
 # Copy the rest of the application
 COPY app ./app
 
-# The .md files will be mounted as a volume in docker-compose
-# But we copy them if they exist for standalone use
-COPY *.md ./
-
 # Expose port 8000
 EXPOSE 8000
 
