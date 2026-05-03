@@ -194,8 +194,14 @@ function updateProgressBar() {
 }
 
 checkBtnEl.addEventListener('click', checkAnswer);
-answerInputEl.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') checkAnswer();
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        if (!feedbackEl.classList.contains('hidden')) {
+            loadNextCard();
+        } else if (document.activeElement === answerInputEl) {
+            checkAnswer();
+        }
+    }
 });
 answerInputEl.addEventListener('input', updateSuggestions);
 
