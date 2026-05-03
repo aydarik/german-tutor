@@ -3,7 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import List
-import random
 import os
 import glob
 
@@ -22,6 +21,7 @@ def get_existing_files():
 
 class WordResponse(BaseModel):
     id: int
+    is_marked: bool
     german: str
     translations: str
     explanation: str
@@ -37,16 +37,12 @@ def fetch_words():
         return []
 
     all_words = get_words(files)
-    # Filter only unmarked words
-    unmarked = [w for w in all_words if not w.is_marked]
-
-    # Shuffle words to provide a random order on every load
-    random.shuffle(unmarked)
 
     response = []
-    for i, w in enumerate(unmarked):
+    for i, w in enumerate(all_words):
         response.append(WordResponse(
             id=i,
+            is_marked=w.is_marked,
             german=w.german,
             translations=w.translations,
             explanation=w.explanation,

@@ -1,6 +1,6 @@
-let allWords = [];
+let learnWords = [];
 let currentWord = null;
-let currentDirection = 'de-to-trans'; // de-to-trans or trans-to-de
+let currentDirection = true; // de-to-trans or trans-to-de
 
 const questionEl = document.getElementById('question');
 const directionLabelEl = document.getElementById('direction-label');
@@ -16,12 +16,18 @@ const correctAnswerEl = document.getElementById('correct-answer');
 const nextBtnEl = document.getElementById('next-btn');
 const markBtnEl = document.getElementById('mark-btn');
 const wordCountEl = document.getElementById('word-count');
+const progressBarEl = document.getElementById('progress-bar');
+
+let totalWordsCount = 0;
 
 async function init() {
     try {
         const response = await fetch('/api/words');
-        allWords = await response.json();
-        wordCountEl.textContent = allWords.length;
+        const allWords = await response.json();
+        totalWordsCount = allWords.length;
+        learnWords = allWords.filter(w => !w.is_marked)
+        wordCountEl.textContent = String(learnWords.length);
+        updateProgressBar();
         loadNextCard();
     } catch (err) {
         console.error("Failed to load words", err);
@@ -30,41 +36,40 @@ async function init() {
 }
 
 function loadNextCard() {
-    if (allWords.length === 0) {
+    // Reset UI
+    feedbackEl.classList.add('hidden');
+    markBtnEl.classList.add('hidden');
+    suggestionsEl.classList.add('hidden');
+    inputGroupEl.classList.remove('hidden');
+    exampleContainerEl.classList.add('hidden');
+    answerInputEl.value = '';
+    answerInputEl.disabled = false;
+    answerInputEl.focus();
+    checkBtnEl.disabled = false;
+
+    if (learnWords.length === 0) {
         questionEl.textContent = "Alles gelernt! No more words.";
+        inputGroupEl.classList.add('hidden');
         exampleContainerEl.classList.add('hidden');
         answerInputEl.disabled = true;
         checkBtnEl.disabled = true;
         return;
     }
 
-    currentWord = allWords[Math.floor(Math.random() * allWords.length)];
-    currentDirection = Math.random() > 0.5 ? 'de-to-trans' : 'trans-to-de';
+    currentWord = learnWords[Math.floor(Math.random() * learnWords.length)];
+    currentDirection = Math.random() > 0.5;
 
-    // Reset UI
-    feedbackEl.classList.add('hidden');
-    markBtnEl.classList.add('hidden');
-    suggestionsEl.classList.add('hidden');
-    inputGroupEl.classList.remove('hidden');
-    answerInputEl.value = '';
-    answerInputEl.disabled = false;
-    answerInputEl.focus();
-    checkBtnEl.disabled = false;
-
-    if (currentDirection === 'de-to-trans') {
+    if (currentDirection) {
         directionLabelEl.textContent = "German to Russian/English";
         questionEl.textContent = currentWord.german;
 
         if (currentWord.example) {
             exampleContainerEl.classList.remove('hidden');
             exampleTextEl.textContent = currentWord.example;
-        } else {
-            exampleContainerEl.classList.add('hidden');
         }
     } else {
         directionLabelEl.textContent = "Russian/English to German";
         questionEl.textContent = currentWord.translations;
-        exampleContainerEl.classList.add('hidden');
     }
 }
 
@@ -76,8 +81,8 @@ function updateSuggestions() {
     }
 
     let possibleOptions = [];
-    if (currentDirection === 'de-to-trans') {
-        allWords.forEach(w => {
+    if (currentDirection) {
+        learnWords.forEach(w => {
             w.translations.split(/[,\/]/).forEach(t => {
                 const cleaned = t.trim();
                 if (cleaned && !possibleOptions.includes(cleaned)) {
@@ -86,7 +91,7 @@ function updateSuggestions() {
             });
         });
     } else {
-        allWords.forEach(w => {
+        learnWords.forEach(w => {
             const cleaned = w.german.trim();
             if (cleaned && !possibleOptions.includes(cleaned)) {
                 possibleOptions.push(cleaned);
@@ -120,12 +125,12 @@ function updateSuggestions() {
 function checkAnswer() {
     const userAnswer = answerInputEl.value.trim().toLowerCase();
     let isCorrect = false;
-    let target = currentDirection === 'de-to-trans' ? currentWord.translations : currentWord.german;
+    let target = currentDirection ? currentWord.translations : currentWord.german;
 
     suggestionsEl.classList.add('hidden');
 
     if (userAnswer) {
-        if (currentDirection === 'de-to-trans') {
+        if (currentDirection) {
             const possibleAnswers = target.toLowerCase().split(/[,\/]/).map(s => s.trim());
             isCorrect = possibleAnswers.some(ans => {
                 return ans === userAnswer || (userAnswer.length > 2 && ans.includes(userAnswer));
@@ -169,13 +174,23 @@ async function markAsLearned() {
         });
 
         if (response.ok) {
-            allWords = allWords.filter(w => w.line_index !== currentWord.line_index || w.file_path !== currentWord.file_path);
-            wordCountEl.textContent = allWords.length;
+            learnWords = learnWords.filter(w => w.line_index !== currentWord.line_index || w.file_path !== currentWord.file_path);
+            wordCountEl.textContent = learnWords.length;
+            updateProgressBar();
             loadNextCard();
         }
     } catch (err) {
         console.error("Failed to mark word", err);
     }
+}
+
+function updateProgressBar() {
+    if (totalWordsCount === 0) {
+        progressBarEl.style.width = '0';
+        return;
+    }
+    const percentage = ((totalWordsCount - learnWords.length) / totalWordsCount) * 100;
+    progressBarEl.style.width = `${percentage}%`;
 }
 
 checkBtnEl.addEventListener('click', checkAnswer);
