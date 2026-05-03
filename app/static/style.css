@@ -262,7 +262,8 @@ input:focus {
     border-bottom: none;
 }
 
-.suggestion-item:hover {
+.suggestion-item:hover,
+.suggestion-item.selected {
     background: var(--accent);
     color: white;
 }

@@ -19,6 +19,7 @@ const wordCountEl = document.getElementById('word-count');
 const progressBarEl = document.getElementById('progress-bar');
 
 let totalWordsCount = 0;
+let selectedSuggestionIndex = -1;
 
 async function init() {
     try {
@@ -74,6 +75,7 @@ function loadNextCard() {
 }
 
 function updateSuggestions() {
+    selectedSuggestionIndex = -1;
     const input = answerInputEl.value.trim().toLowerCase();
     if (input.length < 1) {
         suggestionsEl.classList.add('hidden');
@@ -105,10 +107,14 @@ function updateSuggestions() {
 
     if (filtered.length > 0) {
         suggestionsEl.innerHTML = '';
-        filtered.forEach(opt => {
+        filtered.forEach((opt, index) => {
             const div = document.createElement('div');
             div.className = 'suggestion-item';
             div.textContent = opt;
+            div.onmouseenter = () => {
+                selectedSuggestionIndex = index;
+                updateSuggestionHighlight();
+            };
             div.onclick = () => {
                 answerInputEl.value = opt;
                 suggestionsEl.classList.add('hidden');
@@ -120,6 +126,18 @@ function updateSuggestions() {
     } else {
         suggestionsEl.classList.add('hidden');
     }
+}
+
+function updateSuggestionHighlight() {
+    const items = suggestionsEl.querySelectorAll('.suggestion-item');
+    items.forEach((item, index) => {
+        if (index === selectedSuggestionIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
 }
 
 function checkAnswer() {
@@ -196,11 +214,46 @@ function updateProgressBar() {
 checkBtnEl.addEventListener('click', checkAnswer);
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
+        if (e.ctrlKey) {
+            if (!markBtnEl.classList.contains('hidden')) {
+                markAsLearned();
+                e.preventDefault();
+            }
+            return;
+        }
         if (!feedbackEl.classList.contains('hidden')) {
             loadNextCard();
         } else if (document.activeElement === answerInputEl) {
-            checkAnswer();
+            const items = suggestionsEl.querySelectorAll('.suggestion-item');
+            if (!suggestionsEl.classList.contains('hidden') && selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+                // Select highlighted suggestion
+                items[selectedSuggestionIndex].click();
+                e.preventDefault();
+            } else {
+                checkAnswer();
+            }
         }
+    } else if (e.key === 'ArrowDown') {
+        if (!suggestionsEl.classList.contains('hidden')) {
+            const items = suggestionsEl.querySelectorAll('.suggestion-item');
+            if (items.length > 0) {
+                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+                updateSuggestionHighlight();
+                e.preventDefault();
+            }
+        }
+    } else if (e.key === 'ArrowUp') {
+        if (!suggestionsEl.classList.contains('hidden')) {
+            const items = suggestionsEl.querySelectorAll('.suggestion-item');
+            if (items.length > 0) {
+                selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
+                updateSuggestionHighlight();
+                e.preventDefault();
+            }
+        }
+    } else if (e.key === 'Escape') {
+        suggestionsEl.classList.add('hidden');
+        selectedSuggestionIndex = -1;
     }
 });
 answerInputEl.addEventListener('input', updateSuggestions);
