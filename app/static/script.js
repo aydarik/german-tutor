@@ -13,6 +13,8 @@ const checkBtnEl = document.getElementById('check-btn');
 const feedbackEl = document.getElementById('feedback');
 const feedbackMsgEl = document.getElementById('feedback-message');
 const correctAnswerEl = document.getElementById('correct-answer');
+const feedbackExampleContainerEl = document.getElementById('feedback-example-container');
+const feedbackExampleTextEl = document.getElementById('feedback-example-text');
 const nextBtnEl = document.getElementById('next-btn');
 const markBtnEl = document.getElementById('mark-btn');
 const wordCountEl = document.getElementById('word-count');
@@ -43,6 +45,7 @@ function loadNextCard() {
     suggestionsEl.classList.add('hidden');
     inputGroupEl.classList.remove('hidden');
     exampleContainerEl.classList.add('hidden');
+    feedbackExampleContainerEl.classList.add('hidden');
     answerInputEl.value = '';
     answerInputEl.disabled = false;
     answerInputEl.focus();
@@ -71,6 +74,10 @@ function loadNextCard() {
     } else {
         directionLabelEl.textContent = "Russian/English to German";
         questionEl.textContent = currentWord.translations;
+        
+        if (currentWord.example) {
+            feedbackExampleTextEl.textContent = currentWord.example;
+        }
     }
 }
 
@@ -178,6 +185,10 @@ function showFeedback(isCorrect, correct) {
     }
 
     correctAnswerEl.innerHTML = `Lösung: <strong>${correct}</strong>`;
+
+    if (!currentDirection && currentWord.example) {
+        feedbackExampleContainerEl.classList.remove('hidden');
+    }
 }
 
 async function markAsLearned() {
